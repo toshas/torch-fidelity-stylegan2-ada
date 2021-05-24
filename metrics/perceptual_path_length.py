@@ -34,7 +34,7 @@ def slerp(a, b, t):
 #----------------------------------------------------------------------------
 
 class PPLSampler(torch.nn.Module):
-    def __init__(self, G, G_kwargs, epsilon, space, sampling, crop, vgg16):
+    def __init__(self, G, G_kwargs, epsilon, space, sampling, crop, coerce_fakes_dtype, vgg16):
         assert space in ['z', 'w']
         assert sampling in ['full', 'end']
         super().__init__()
@@ -44,6 +44,7 @@ class PPLSampler(torch.nn.Module):
         self.space = space
         self.sampling = sampling
         self.crop = crop
+        self.coerce_fakes_dtype = coerce_fakes_dtype
         self.vgg16 = copy.deepcopy(vgg16)
 
     def forward(self, c):
@@ -85,6 +86,10 @@ class PPLSampler(torch.nn.Module):
         if self.G.img_channels == 1:
             img = img.repeat([1, 3, 1, 1])
 
+        if self.coerce_fakes_dtype:
+            img = img.clamp(0., 255.)
+            img = img.to(torch.uint8)
+
         # Evaluate differential LPIPS.
         lpips_t0, lpips_t1 = self.vgg16(img, resize_images=False, return_lpips=True).chunk(2)
         dist = (lpips_t0 - lpips_t1).square().sum(1) / self.epsilon ** 2
@@ -92,13 +97,13 @@ class PPLSampler(torch.nn.Module):
 
 #----------------------------------------------------------------------------
 
-def compute_ppl(opts, num_samples, epsilon, space, sampling, crop, batch_size, jit=False):
+def compute_ppl(opts, num_samples, epsilon, space, sampling, crop, batch_size, coerce_fakes_dtype=False, jit=False):
     dataset = dnnlib.util.construct_class_by_name(**opts.dataset_kwargs)
     vgg16_url = 'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/metrics/vgg16.pt'
     vgg16 = metric_utils.get_feature_detector(vgg16_url, num_gpus=opts.num_gpus, rank=opts.rank, verbose=opts.progress.verbose)
 
     # Setup sampler.
-    sampler = PPLSampler(G=opts.G, G_kwargs=opts.G_kwargs, epsilon=epsilon, space=space, sampling=sampling, crop=crop, vgg16=vgg16)
+    sampler = PPLSampler(G=opts.G, G_kwargs=opts.G_kwargs, epsilon=epsilon, space=space, sampling=sampling, crop=crop, coerce_fakes_dtype=coerce_fakes_dtype, vgg16=vgg16)
     sampler.eval().requires_grad_(False).to(opts.device)
     if jit:
         c = torch.zeros([batch_size, opts.G.c_dim], device=opts.device)
@@ -129,3 +134,88 @@ def compute_ppl(opts, num_samples, epsilon, space, sampling, crop, batch_size, j
     return float(ppl)
 
 #----------------------------------------------------------------------------
+
+
+from torch_fidelity import calculate_metrics, KEY_METRIC_PPL_MEAN
+
+
+class G_wrapper(torch.nn.Module):
+    def __init__(self, G, G_kwargs, crop, coerce_fakes_dtype):
+        super(G_wrapper, self).__init__()
+        self.G = copy.deepcopy(G)
+        self.G_kwargs = G_kwargs
+        self.crop = crop
+        self.coerce_fakes_dtype = coerce_fakes_dtype
+
+    def forward(self, z, c):
+        if c.dim() == 1:
+            c = torch.nn.functional.one_hot(c, self.G.c_dim)
+
+        w = self.G.mapping(z=z, c=c)
+
+        # Randomize noise buffers.
+        for name, buf in self.G.named_buffers():
+            if name.endswith('.noise_const'):
+                buf.copy_(torch.randn_like(buf))
+
+        # Generate images.
+        img = self.G.synthesis(ws=w, noise_mode='const', force_fp32=True, **self.G_kwargs)
+
+        # Center crop.
+        if self.crop:
+            assert img.shape[2] == img.shape[3]
+            c = img.shape[2] // 8
+            img = img[:, :, c * 3: c * 7, c * 2: c * 6]
+
+        # Downsample to 256x256 if larger (smaller, such as cifar-10, will stay as is)
+        factor = self.G.img_resolution // 256
+        if factor > 1:
+            img = img.reshape([-1, img.shape[1], img.shape[2] // factor, factor, img.shape[3] // factor, factor]).mean([3, 5])
+
+        # Scale dynamic range from [-1,1] to [0,255].
+        img = (img + 1) * (255 / 2)
+        if self.G.img_channels == 1:
+            img = img.repeat([1, 3, 1, 1])
+
+        # coerce dtyoe to uint8 (so the predictions are judged exactly how they would be read from an image file)
+        if self.coerce_fakes_dtype:
+            img = img.clamp(0., 255.)
+            img = img.to(torch.uint8)
+
+        return img
+
+
+def compute_ppl_fidelity(opts, num_samples, epsilon, space, sampling, crop, batch_size, coerce_fakes_dtype=False, jit=False):
+    assert space == 'z', 'space="w" currently not supported'
+    assert sampling == 'end', 'sampling="full" currently not supported (as it only makes sense for space="w")'
+
+    if opts.rank > 0:
+        # keeps torch-fidelity busy on one gpu with rank=0
+        return float('nan')
+
+    g_wrapper = G_wrapper(opts.G, opts.G_kwargs, crop, coerce_fakes_dtype)
+    g_wrapper.eval().requires_grad_(False).to(opts.device)
+    if jit:
+        z = torch.zeros([batch_size, opts.G.z_dim], device=opts.device)
+        c = torch.zeros([batch_size, opts.G.c_dim], device=opts.device)
+        g_wrapper = torch.jit.trace(g_wrapper, [z, c], check_trace=False)
+
+    out = calculate_metrics(
+        batch_size=batch_size,
+        ppl=True,
+        model=g_wrapper,
+        model_z_type='normal',
+        model_z_size=opts.G.z_dim,
+        model_conditioning_num_classes=opts.G.c_dim,
+        ppl_num_samples=num_samples,
+        ppl_epsilon=epsilon,
+        ppl_reduction='mean',
+        ppl_sample_similarity='lpips-vgg16',
+        ppl_sample_similarity_resize=None,
+        ppl_sample_similarity_dtype='uint8' if coerce_fakes_dtype else 'float32',
+        ppl_discard_percentile_lower=1,
+        ppl_discard_percentile_higher=99,
+        ppl_z_interp_mode='slerp_unit',
+    )
+
+    return out[KEY_METRIC_PPL_MEAN]

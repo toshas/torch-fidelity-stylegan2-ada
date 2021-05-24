@@ -150,3 +150,70 @@ def ppl_wend(opts):
     return dict(ppl_wend=ppl)
 
 #----------------------------------------------------------------------------
+# torch-fidelity compatibility metrics.
+
+@register_metric
+def ppl_zend_cifar10_original_epsexp_m4_dtype_u8(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-4, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
+
+@register_metric
+def ppl_zend_cifar10_fidelity_epsexp_m4_dtype_u8(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-4, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
+
+@register_metric
+def ppl_zend_cifar10_original_epsexp_m4_dtype_f32(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-4, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
+
+@register_metric
+def ppl_zend_cifar10_fidelity_epsexp_m4_dtype_f32(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-4, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
+
+@register_metric
+def ppl_zend_cifar10_original_epsexp_m3_dtype_u8(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-3, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
+
+@register_metric
+def ppl_zend_cifar10_fidelity_epsexp_m3_dtype_u8(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-3, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
+
+@register_metric
+def ppl_zend_cifar10_original_epsexp_m3_dtype_f32(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-3, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
+
+@register_metric
+def ppl_zend_cifar10_fidelity_epsexp_m3_dtype_f32(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-3, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
+
+@register_metric
+def ppl_zend_cifar10_original_epsexp_m2_dtype_u8(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-2, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
+
+@register_metric
+def ppl_zend_cifar10_fidelity_epsexp_m2_dtype_u8(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-2, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
+
+@register_metric
+def ppl_zend_cifar10_original_epsexp_m2_dtype_f32(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-2, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
+
+@register_metric
+def ppl_zend_cifar10_fidelity_epsexp_m2_dtype_f32(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-2, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
+
+@register_metric
+def ppl_zend_cifar10_original_epsexp_m1_dtype_u8(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-1, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
+
+@register_metric
+def ppl_zend_cifar10_fidelity_epsexp_m1_dtype_u8(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-1, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
+
+@register_metric
+def ppl_zend_cifar10_original_epsexp_m1_dtype_f32(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-1, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
+
+@register_metric
+def ppl_zend_cifar10_fidelity_epsexp_m1_dtype_f32(opts):
+    return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-1, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
+
+#----------------------------------------------------------------------------
