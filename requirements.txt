@@ -1,0 +1,6 @@
+click
+numpy
+torch
+imageio-ffmpeg==0.4.3
+pyspng==0.1.0
+# git+https://github.com/toshas/torch-fidelity.git@wip#egg=torch-fidelity

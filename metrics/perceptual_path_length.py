@@ -136,10 +136,10 @@ def compute_ppl(opts, num_samples, epsilon, space, sampling, crop, batch_size, c
 #----------------------------------------------------------------------------
 
 
-from torch_fidelity import calculate_metrics, KEY_METRIC_PPL_MEAN
+from torch_fidelity import calculate_metrics, KEY_METRIC_PPL_MEAN, GenerativeModelBase
 
 
-class G_wrapper(torch.nn.Module):
+class G_wrapper(GenerativeModelBase):
     def __init__(self, G, G_kwargs, crop, coerce_fakes_dtype):
         super(G_wrapper, self).__init__()
         self.G = copy.deepcopy(G)
@@ -184,6 +184,18 @@ class G_wrapper(torch.nn.Module):
 
         return img
 
+    @property
+    def z_size(self):
+        return self.G.z_dim
+
+    @property
+    def z_type(self):
+        return 'normal'
+
+    @property
+    def num_classes(self):
+        return self.G.c_dim
+
 
 def compute_ppl_fidelity(opts, num_samples, epsilon, space, sampling, crop, batch_size, coerce_fakes_dtype=False, jit=False):
     assert space == 'z', 'space="w" currently not supported'
@@ -203,11 +215,11 @@ def compute_ppl_fidelity(opts, num_samples, epsilon, space, sampling, crop, batc
     out = calculate_metrics(
         batch_size=batch_size,
         ppl=True,
-        model=g_wrapper,
-        model_z_type='normal',
-        model_z_size=opts.G.z_dim,
-        model_conditioning_num_classes=opts.G.c_dim,
-        ppl_num_samples=num_samples,
+        input1=g_wrapper,
+        input1_model_z_type='normal',
+        input1_model_z_size=opts.G.z_dim,
+        input1_model_num_classes=opts.G.c_dim,
+        input1_model_num_samples=num_samples,
         ppl_epsilon=epsilon,
         ppl_reduction='mean',
         ppl_sample_similarity='lpips-vgg16',
