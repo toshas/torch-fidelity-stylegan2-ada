@@ -1,3 +1,15 @@
+# Description of the fork
+
+This repository is a fork of [stylegan2-ada](https://github.com/NVlabs/stylegan2-ada-pytorch), an integration and compatibility playpen for [torch-fidelity](https://github.com/toshas/torch-fidelity) -- a toolkit for high-fidelity performance metrics evaluation for generative models in PyTorch. 
+
+The repository adds a number of GAN metrics using the interface implemented by StyleGAN authors, and demonstrates the use of torch-fidelity.
+- **ppl_zend_cifar10_** The following suffixes are available:
+  - **original** or **fidelity**: whether the original code is used, or torch-fidelity wrapper
+  - **epsexp_m1**, **epsexp_m2**, **epsexp_m3**, **epsexp_m4**: corresponds to the value of epsilon in perceptual path length (PPL) metric calculation
+  - **dtype_u8**, **dtype_f32**: whether to perform dtype coercion before feeding generated fakes into LPIPS similarity measure
+
+# Original README.md
+
 ## StyleGAN2-ADA &mdash; Official PyTorch implementation
 
 ![Teaser image](./docs/stylegan2-ada-teaser-1024x252.png)
