@@ -136,68 +136,68 @@ def compute_ppl(opts, num_samples, epsilon, space, sampling, crop, batch_size, c
 #----------------------------------------------------------------------------
 
 
-from torch_fidelity import calculate_metrics, KEY_METRIC_PPL_MEAN, GenerativeModelBase
-
-
-class G_wrapper(GenerativeModelBase):
-    def __init__(self, G, G_kwargs, crop, coerce_fakes_dtype):
-        super(G_wrapper, self).__init__()
-        self.G = copy.deepcopy(G)
-        self.G_kwargs = G_kwargs
-        self.crop = crop
-        self.coerce_fakes_dtype = coerce_fakes_dtype
-
-    def forward(self, z, c):
-        if c.dim() == 1:
-            c = torch.nn.functional.one_hot(c, self.G.c_dim)
-
-        w = self.G.mapping(z=z, c=c)
-
-        # Randomize noise buffers.
-        for name, buf in self.G.named_buffers():
-            if name.endswith('.noise_const'):
-                buf.copy_(torch.randn_like(buf))
-
-        # Generate images.
-        img = self.G.synthesis(ws=w, noise_mode='const', force_fp32=True, **self.G_kwargs)
-
-        # Center crop.
-        if self.crop:
-            assert img.shape[2] == img.shape[3]
-            c = img.shape[2] // 8
-            img = img[:, :, c * 3: c * 7, c * 2: c * 6]
-
-        # Downsample to 256x256 if larger (smaller, such as cifar-10, will stay as is)
-        factor = self.G.img_resolution // 256
-        if factor > 1:
-            img = img.reshape([-1, img.shape[1], img.shape[2] // factor, factor, img.shape[3] // factor, factor]).mean([3, 5])
-
-        # Scale dynamic range from [-1,1] to [0,255].
-        img = (img + 1) * (255 / 2)
-        if self.G.img_channels == 1:
-            img = img.repeat([1, 3, 1, 1])
-
-        # coerce dtyoe to uint8 (so the predictions are judged exactly how they would be read from an image file)
-        if self.coerce_fakes_dtype:
-            img = img.clamp(0., 255.)
-            img = img.to(torch.uint8)
-
-        return img
-
-    @property
-    def z_size(self):
-        return self.G.z_dim
-
-    @property
-    def z_type(self):
-        return 'normal'
-
-    @property
-    def num_classes(self):
-        return self.G.c_dim
-
-
 def compute_ppl_fidelity(opts, num_samples, epsilon, space, sampling, crop, batch_size, coerce_fakes_dtype=False, jit=False):
+
+    from torch_fidelity import calculate_metrics, KEY_METRIC_PPL_MEAN, GenerativeModelBase
+
+    class G_wrapper(GenerativeModelBase):
+        def __init__(self, G, G_kwargs, crop, coerce_fakes_dtype):
+            super(G_wrapper, self).__init__()
+            self.G = copy.deepcopy(G)
+            self.G_kwargs = G_kwargs
+            self.crop = crop
+            self.coerce_fakes_dtype = coerce_fakes_dtype
+
+        def forward(self, z, c):
+            if c.dim() == 1:
+                c = torch.nn.functional.one_hot(c, self.G.c_dim)
+
+            w = self.G.mapping(z=z, c=c)
+
+            # Randomize noise buffers.
+            for name, buf in self.G.named_buffers():
+                if name.endswith('.noise_const'):
+                    buf.copy_(torch.randn_like(buf))
+
+            # Generate images.
+            img = self.G.synthesis(ws=w, noise_mode='const', force_fp32=True, **self.G_kwargs)
+
+            # Center crop.
+            if self.crop:
+                assert img.shape[2] == img.shape[3]
+                c = img.shape[2] // 8
+                img = img[:, :, c * 3: c * 7, c * 2: c * 6]
+
+            # Downsample to 256x256 if larger (smaller, such as cifar-10, will stay as is)
+            factor = self.G.img_resolution // 256
+            if factor > 1:
+                img = img.reshape(
+                    [-1, img.shape[1], img.shape[2] // factor, factor, img.shape[3] // factor, factor]).mean([3, 5])
+
+            # Scale dynamic range from [-1,1] to [0,255].
+            img = (img + 1) * (255 / 2)
+            if self.G.img_channels == 1:
+                img = img.repeat([1, 3, 1, 1])
+
+            # coerce dtyoe to uint8 (so the predictions are judged exactly how they would be read from an image file)
+            if self.coerce_fakes_dtype:
+                img = img.clamp(0., 255.)
+                img = img.to(torch.uint8)
+
+            return img
+
+        @property
+        def z_size(self):
+            return self.G.z_dim
+
+        @property
+        def z_type(self):
+            return 'normal'
+
+        @property
+        def num_classes(self):
+            return self.G.c_dim
+
     assert space == 'z', 'space="w" currently not supported'
     assert sampling == 'end', 'sampling="full" currently not supported (as it only makes sense for space="w")'
 

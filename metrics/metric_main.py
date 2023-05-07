@@ -7,8 +7,11 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 import os
+import random
 import time
 import json
+
+import numpy as np
 import torch
 import dnnlib
 
@@ -152,68 +155,106 @@ def ppl_wend(opts):
 #----------------------------------------------------------------------------
 # torch-fidelity compatibility metrics.
 
+def seed_everything(seed=2020):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+@register_metric
+def pr50k3_original(opts):
+    seed_everything()
+    opts.dataset_kwargs.update(max_size=None)
+    precision, recall = precision_recall.compute_pr(opts, max_real=50000, num_gen=50000, nhood_size=3, row_batch_size=10000, col_batch_size=10000)
+    return dict(pr50k3_precision=precision, pr50k3_recall=recall)
+
+@register_metric
+def pr50k3_fidelity(opts):
+    seed_everything()
+    opts.dataset_kwargs.update(max_size=None)
+    precision, recall = precision_recall.compute_pr_fidelity(opts, max_real=50000, num_gen=50000, nhood_size=3, row_batch_size=10000, col_batch_size=10000)
+    return dict(pr50k3_precision=precision, pr50k3_recall=recall)
+
 @register_metric
 def ppl_zend_cifar10_original_epsexp_m4_dtype_u8(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-4, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
 
 @register_metric
 def ppl_zend_cifar10_fidelity_epsexp_m4_dtype_u8(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-4, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
 
 @register_metric
 def ppl_zend_cifar10_original_epsexp_m4_dtype_f32(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-4, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
 
 @register_metric
 def ppl_zend_cifar10_fidelity_epsexp_m4_dtype_f32(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-4, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
 
 @register_metric
 def ppl_zend_cifar10_original_epsexp_m3_dtype_u8(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-3, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
 
 @register_metric
 def ppl_zend_cifar10_fidelity_epsexp_m3_dtype_u8(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-3, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
 
 @register_metric
 def ppl_zend_cifar10_original_epsexp_m3_dtype_f32(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-3, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
 
 @register_metric
 def ppl_zend_cifar10_fidelity_epsexp_m3_dtype_f32(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-3, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
 
 @register_metric
 def ppl_zend_cifar10_original_epsexp_m2_dtype_u8(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-2, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
 
 @register_metric
 def ppl_zend_cifar10_fidelity_epsexp_m2_dtype_u8(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-2, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
 
 @register_metric
 def ppl_zend_cifar10_original_epsexp_m2_dtype_f32(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-2, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
 
 @register_metric
 def ppl_zend_cifar10_fidelity_epsexp_m2_dtype_f32(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-2, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
 
 @register_metric
 def ppl_zend_cifar10_original_epsexp_m1_dtype_u8(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-1, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
 
 @register_metric
 def ppl_zend_cifar10_fidelity_epsexp_m1_dtype_u8(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-1, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=True))
 
 @register_metric
 def ppl_zend_cifar10_original_epsexp_m1_dtype_f32(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl(opts, num_samples=50000, epsilon=1e-1, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
 
 @register_metric
 def ppl_zend_cifar10_fidelity_epsexp_m1_dtype_f32(opts):
+    seed_everything()
     return dict(ppl_zend=perceptual_path_length.compute_ppl_fidelity(opts, num_samples=50000, epsilon=1e-1, space='z', sampling='end', crop=False, batch_size=2, coerce_fakes_dtype=False))
 
 #----------------------------------------------------------------------------
